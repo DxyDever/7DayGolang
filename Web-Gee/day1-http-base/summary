@@ -1,0 +1,14 @@
+type Handler interface {
+    ServeHTTP(w ResponseWriter, r *Request)
+}
+
+func ListenAndServe(address string, h Handler) error
+
+在 Go 语言中，实现了接口方法的 struct 都可以强制转换为接口类型。你可以这么写：
+
+handler := (http.Handler)(engine) // 手动转换为借口类型
+log.Fatal(http.ListenAndServe(":9999", handler))
+
+然后，ListenAndServe 方法里面会去调用 handler.ServeHTTP() 方法，你感兴趣，可以在 http 的源码中找到调用的地方
+。但是这么写是多余的，传参时，会自动进行参数转换的。所以直接传入engine 即可。
+

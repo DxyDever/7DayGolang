@@ -1,0 +1,93 @@
+
+- 介绍互斥锁的使用，实现lru缓存的并发控制
+- 实现核心数据结构Group，缓存不存在的时候，调用回调函数获取源数据
+
+1  sync.Mutex
+
+多个协程(goroutine)同时读写同一个变量，在并发度较高的情况下，会发生冲突。确保一次只有一个协程(goroutine)可以访问该变量以避免冲突，这称之为互斥，
+互斥锁可以解决这个问题。
+
+sync.Mutex 是一个互斥锁，可以由不同的协程加锁和解锁。
+
+sync.Mutex 是 Go 语言标准库提供的一个互斥锁，当一个协程(goroutine)获得了这个锁的拥有权后，其它请求锁的协程(goroutine) 就会阻塞在 Lock() 方法
+的调用上，直到调用 Unlock() 锁被释放。
+
+接下来举一个简单的例子，假设有10个并发的协程打印了同一个数字100，为了避免重复打印，实现了printOnce(num int) 函数，使用集合 set 记录已打印过的
+数字，如果数字已打印过，则不再打印。
+
+var set = make(map[int]bool, 0)
+
+func printOnce(num int) {
+	if _, exist := set[num]; !exist {
+		fmt.Println(num)
+	}
+	set[num] = true
+}
+
+func main() {
+	for i := 0; i < 10; i++ {
+		go printOnce(100)
+	}
+	time.Sleep(time.Second)
+}
+
+我们运行 go run . 会发生什么情况呢？
+
+$ go run .
+100
+100
+
+有时候打印 2 次，有时候打印 4 次，有时候还会触发 panic，因为对同一个数据结构set的访问冲突了。接下来用互斥锁的Lock()和Unlock()
+ 方法将冲突的部分包裹起来：
+
+ var m sync.Mutex
+ var set = make(map[int]bool, 0)
+
+ func printOnce(num int) {
+ 	m.Lock()
+ 	if _, exist := set[num]; !exist {
+ 		fmt.Println(num)
+ 	}
+ 	set[num] = true
+ 	m.Unlock()
+ }
+
+ func main() {
+ 	for i := 0; i < 10; i++ {
+ 		go printOnce(100)
+ 	}
+ 	time.Sleep(time.Second)
+ }
+
+$ go run .
+100
+
+相同的数字只会被打印一次。当一个协程调用了 Lock() 方法时，其他协程被阻塞了，直到Unlock()调用将锁释放。因此被包裹部分的代码就能够避免冲突，实现互斥。
+
+Unlock()释放锁还有另外一种写法：
+
+func printOnce(num int) {
+	m.Lock()
+	defer m.Unlock()
+	if _, exist := set[num]; !exist {
+		fmt.Println(num)
+	}
+	set[num] = true
+}
+
+ 2 支持并发读写
+上一篇文章 GeeCache 第一天 实现了 LRU 缓存淘汰策略。接下来我们使用 sync.Mutex 封装 LRU 的几个方法，使之支持并发的读写。在这之前，我们抽象了
+一个只读数据结构 ByteView 用来表示缓存值，是 GeeCache 主要的数据结构之一。
+
+学习点
+- 学习接口型函数的使用场景
+https://geektutu.com/post/7days-golang-q1.html
+- 		/*
+  				go的断言类型解析
+  			    https://studygolang.com/articles/11419
+
+  		*/
+- sync官方文档-golang.org
+
+
+

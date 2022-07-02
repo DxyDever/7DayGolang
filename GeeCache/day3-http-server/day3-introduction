@@ -1,0 +1,21 @@
+1 http标准库
+
+Go 语言提供了 http 标准库，可以非常方便地搭建 HTTP 服务端和客户端。比如我们可以实现一个服务端，无论接收到什么请求，都返回字符串 “Hello World!”
+
+
+2 GeeCache HTTP服务端
+分布式缓存需要实现节点间通信，建立基于 HTTP 的通信机制是比较常见和简单的做法。如果一个节点启动了 HTTP 服务，那么这个节点就可以被其他节点访问。今天我们就为单机节点搭建 HTTP Server。
+
+不与其他部分耦合，我们将这部分代码放在新的 http.go 文件中，当前的代码结构如下：
+
+geecache/
+    |--lru/
+        |--lru.go  // lru 缓存淘汰策略
+    |--byteview.go // 缓存值的抽象与封装
+    |--cache.go    // 并发控制
+    |--geecache.go // 负责与外部交互，控制缓存存储和获取的主流程
+	|--http.go     // 提供被其他节点访问的能力(基于http)
+
+
+学习点
+- http官网文档：https://golang.org/pkg/http
